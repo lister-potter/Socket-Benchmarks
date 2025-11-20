@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.env
+.env.*
+**/publish/
+**/*.user
+.idea/
+.vscode/
+.DS_Store
