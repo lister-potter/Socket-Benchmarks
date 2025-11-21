@@ -1,0 +1,261 @@
+---
+alwaysApply: true
+---
+# C4 Model Architecture Modeling Guidelines
+
+## Overview
+
+The C4 model is a hierarchical approach to visualizing software architecture that uses four levels of abstraction: System Context, Container, Component, and Code. This rule file guides when and how to use C4 modeling during the design phase of feature development.
+
+## When to Model
+
+### During Design Phase
+- The model MUST create C4 diagrams when developing the Architecture section of the design document
+- The model SHOULD create diagrams when the feature involves:
+  - Multiple systems or services interacting
+  - Distributed components or microservices
+  - External system integrations
+  - Complex data flows between components
+  - New containers or significant architectural changes
+- The model MAY create diagrams for simpler features if they help clarify the architecture
+- The model MUST NOT create C4 diagrams during requirements gathering (too early)
+- The model MUST NOT create C4 diagrams during task planning (too detailed)
+
+### Diagram Selection Criteria
+- **System Context Diagram**: MUST be created when the feature involves:
+  - External users or actors
+  - External systems or services
+  - Clear system boundaries
+  - Integration with third-party services
+- **Container Diagram**: MUST be created when the feature involves:
+  - Multiple applications or services
+  - Databases or data stores
+  - Web applications, APIs, or desktop applications
+  - Message queues or other infrastructure
+- **Component Diagram**: SHOULD be created when the feature involves:
+  - Multiple components within a container
+  - Complex internal interactions
+  - Service boundaries within an application
+  - Clear separation of concerns
+- **Code Diagram**: MAY be created when:
+  - Specific implementation patterns need documentation
+  - Complex class relationships exist
+  - Critical algorithms or data structures need explanation
+  - Usually only for complex or critical features
+
+## C4 Model Abstractions
+
+### 1. Software System
+- Represents the highest level of abstraction
+- Shows the software system as a whole
+- Includes relationships with users and external systems
+- The model MUST represent the system as a single box in System Context diagrams
+- The model MUST clearly label the system with its name
+
+### 2. Container
+- Represents an application or data store
+- Examples: web applications, mobile apps, desktop applications, databases, file systems, message queues
+- The model MUST identify containers when creating Container diagrams
+- The model MUST label containers with their technology (e.g., "ASP.NET Core Web Application", "SQL Server Database")
+- The model SHOULD show relationships between containers
+- The model MUST indicate the technology stack for each container
+
+### 3. Component
+- Represents a grouping of related functionality within a container
+- Examples: controllers, services, repositories, APIs, modules
+- The model MUST identify components when creating Component diagrams
+- The model MUST show how components interact within and across containers
+- The model SHOULD use clear, domain-focused names for components
+
+### 4. Code
+- Represents classes, interfaces, and their relationships
+- The model SHOULD only create Code diagrams for complex or critical implementation details
+- The model MAY use UML class diagrams or similar for code-level details
+- The model MUST ensure code diagrams map to actual code structure
+
+## Diagram Creation Rules
+
+### System Context Diagram
+- The model MUST create a System Context diagram when:
+  - The feature interacts with external users or systems
+  - The system boundary needs to be clearly defined
+- The model MUST include:
+  - The software system in scope (as a single box)
+  - Users or actors that interact with the system
+  - External systems that the system interacts with
+  - Relationships showing data flow or interactions
+- The model MUST use simple notation: boxes for systems/users, lines for relationships
+- The model SHOULD include labels on relationships describing the interaction
+- The model MUST NOT include internal implementation details
+
+### Container Diagram
+- The model MUST create a Container diagram when:
+  - The feature spans multiple applications or services
+  - The feature involves databases or data stores
+  - The architecture includes multiple deployable units
+- The model MUST include:
+  - All containers (applications, databases, etc.) within the system
+  - Technology choices for each container
+  - Relationships between containers
+  - Users or external systems (if relevant at this level)
+- The model MUST label each container with:
+  - Container name
+  - Technology stack (e.g., "Blazor Server", "REST API", "SQL Server")
+- The model SHOULD show data flow direction on relationships
+- The model MUST NOT include component-level details
+
+### Component Diagram
+- The model MUST create a Component diagram when:
+  - The feature involves multiple components within a container
+  - Component interactions are complex
+  - Service boundaries need to be defined
+- The model MUST include:
+  - Components within the relevant container(s)
+  - Relationships between components
+  - External containers or systems (if components interact with them)
+- The model MUST use domain-focused component names (e.g., "OrderService", "CustomerRepository")
+- The model SHOULD show component responsibilities
+- The model MUST NOT include code-level implementation details
+
+### Code Diagram
+- The model MAY create a Code diagram when:
+  - Complex class relationships need documentation
+  - Critical algorithms or patterns need explanation
+  - Implementation details are architecturally significant
+- The model SHOULD use standard UML class diagram notation or similar
+- The model MUST ensure code diagrams align with actual code structure
+- The model SHOULD only create code diagrams for architecturally significant code
+
+## Integration with Design Document
+
+### Architecture Section
+- The model MUST include C4 diagrams in the Architecture section of the design document
+- The model MUST start with the highest appropriate level (usually System Context or Container)
+- The model MUST create lower-level diagrams when they add value
+- The model MUST use Mermaid syntax for diagrams in markdown documents
+- The model SHOULD include a brief description explaining each diagram
+
+### Diagram Format
+- The model MUST use Mermaid syntax for C4-style diagrams
+- The model SHOULD use the following Mermaid diagram types:
+  - `graph` or `flowchart` for System Context and Container diagrams
+  - `graph` or `flowchart` for Component diagrams
+  - `classDiagram` for Code diagrams (when needed)
+- The model MUST ensure diagrams are readable and not overly complex
+- The model SHOULD break complex diagrams into multiple simpler diagrams
+
+### Example Mermaid Syntax for C4 Diagrams
+
+```mermaid
+graph TB
+    User[User]
+    System[Software System]
+    External[External System]
+    
+    User -->|Uses| System
+    System -->|Integrates with| External
+```
+
+## Modeling Best Practices
+
+### Abstraction Levels
+- The model MUST maintain appropriate abstraction levels:
+  - System Context: system-level interactions only
+  - Container: application and data store level
+  - Component: service/module level within containers
+  - Code: class/interface level (rarely needed)
+- The model MUST NOT mix abstraction levels inappropriately
+- The model SHOULD create separate diagrams for different abstraction levels
+
+### Naming Conventions
+- The model MUST use clear, descriptive names for all elements
+- The model MUST use domain terminology consistent with the codebase
+- The model SHOULD avoid technical jargon when domain terms are clearer
+- The model MUST label relationships with action verbs (e.g., "sends", "queries", "stores")
+
+### Relationships
+- The model MUST show relationships between elements at the same abstraction level
+- The model SHOULD label relationships to indicate:
+  - Data flow direction
+  - Interaction type (e.g., "HTTP REST", "Database Query", "Message Queue")
+  - Protocol or technology used
+- The model MUST NOT show relationships that skip abstraction levels
+
+### Completeness
+- The model MUST include all relevant elements for the feature scope
+- The model SHOULD focus on elements directly related to the feature
+- The model MAY omit elements that are not relevant to the feature
+- The model MUST ensure diagrams remain readable and not cluttered
+
+## When NOT to Model
+
+- The model MUST NOT create C4 diagrams for:
+  - Trivial features with no architectural impact
+  - Features that are purely UI changes with no backend impact
+  - Simple CRUD operations with no complex interactions
+  - Bug fixes that don't change architecture
+- The model SHOULD use simpler text descriptions when diagrams don't add value
+- The model MUST balance diagram value against maintenance overhead
+
+## Tooling and Notation
+
+### Tool Independence
+- The model MUST use Mermaid syntax for diagrams in markdown files
+- The model SHOULD ensure diagrams are tool-independent (using standard notation)
+- The model MAY reference specific tools if they provide better visualization, but MUST provide Mermaid alternatives
+
+### Notation Guidelines
+- The model MUST use simple, clear notation
+- The model SHOULD use consistent shapes and colors (if colors are used)
+- The model MUST ensure diagrams are understandable without specialized knowledge
+- The model SHOULD include a legend for non-standard notation
+
+## Review and Maintenance
+
+### Design Review
+- The model MUST ensure C4 diagrams align with the design document
+- The model MUST verify diagrams match the described architecture
+- The model SHOULD update diagrams if architecture changes during design review
+- The model MUST ensure diagrams are consistent across different abstraction levels
+
+### Integration with Requirements
+- The model MUST ensure diagrams support the feature requirements
+- The model SHOULD trace diagram elements to specific requirements
+- The model MUST verify all required interactions are represented in diagrams
+
+## Additional Supporting Diagrams
+
+### When to Use Additional Diagrams
+- The model MAY create additional diagram types when needed:
+  - **Dynamic Diagrams**: For showing interactions over time or sequence of events
+  - **Deployment Diagrams**: For showing how containers are deployed to infrastructure
+  - **System Landscape Diagrams**: For showing multiple software systems and their relationships
+- The model SHOULD use these diagrams when they add significant value
+- The model MUST ensure additional diagrams complement, not replace, C4 diagrams
+
+### Dynamic Diagrams
+- The model MAY create sequence diagrams or activity diagrams when:
+  - Complex workflows need to be documented
+  - Timing or ordering of interactions is critical
+  - Multiple actors interact in a specific sequence
+- The model SHOULD use Mermaid sequence diagrams for this purpose
+
+### Deployment Diagrams
+- The model MAY create deployment diagrams when:
+  - Infrastructure and deployment are architecturally significant
+  - Container deployment locations matter
+  - Network topology affects the feature
+- The model SHOULD use Mermaid flowchart or graph diagrams for deployment views
+
+## Summary
+
+The C4 model provides a structured approach to visualizing software architecture at different levels of abstraction. During the design phase, the model MUST:
+
+1. Assess whether C4 diagrams add value for the feature
+2. Create appropriate diagrams starting from the highest relevant level
+3. Use Mermaid syntax for markdown compatibility
+4. Maintain appropriate abstraction levels
+5. Ensure diagrams align with the design document and requirements
+6. Focus on clarity and readability over completeness
+
+The model MUST integrate C4 modeling seamlessly into the design document workflow, creating diagrams as part of the Architecture section when they help communicate the design effectively.

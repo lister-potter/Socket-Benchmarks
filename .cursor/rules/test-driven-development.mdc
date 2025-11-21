@@ -1,0 +1,368 @@
+---
+alwaysApply: true
+---
+# Test-Driven Development (TDD) Guidelines
+
+## Overview
+
+Test-Driven Development (TDD) is a software development approach where automated unit-level test cases are written before the production code, then just enough code is written to make the test pass, followed by refactoring.
+
+**Core Principle:** Write tests first, then write code to pass those tests, then refactor.
+
+**Primary Goal:** Improve code quality, design, and maintainability through test-first development.
+
+## The TDD Mantra
+
+### Red-Green-Refactor Cycle
+
+- The model MUST follow the Red-Green-Refactor cycle:
+  1. **Red** - Write a failing test
+  2. **Green** - Make the test pass with minimal code
+  3. **Refactor** - Improve the code while keeping tests passing
+
+- The model MUST ensure all tests pass after each refactoring step
+- The model MUST NOT skip the Red phase (test must fail first)
+- The model MUST NOT add functionality beyond what the test requires
+
+## The TDD Cycle
+
+### Six-Step Process
+
+#### 1. List Scenarios for the New Feature
+
+- The model MUST identify expected variants in new behavior before writing code
+- The model MUST list use cases, edge cases, and error conditions
+- The model SHOULD ask "what-if" questions to identify scenarios
+- The model MUST focus on requirements before implementation
+
+#### 2. Write a Test for an Item on the List
+
+- The model MUST create an automated test that would pass if the requirement is met
+- The model MUST write small, focused tests (one thing at a time)
+- The model MUST use descriptive test names that explain what is being tested
+- The model MUST follow the AAA pattern (Arrange, Act, Assert)
+- The model SHOULD include cleanup when necessary
+
+#### 3. Run All Tests - New Test Should Fail
+
+- The model MUST run all tests to validate the new test fails
+- The model MUST ensure the test fails for the right reason (not compilation error)
+- The model MUST verify the test harness is working correctly
+- The model MUST validate the test is not flawed before proceeding
+
+#### 4. Write the Simplest Code That Passes
+
+- The model MUST implement just enough code to make the test pass
+- The model MAY write inelegant or hard-coded code initially
+- The model MUST NOT add code beyond tested functionality
+- The model MUST follow KISS (Keep It Simple, Stupid) principle
+- The model MUST follow YAGNI (You Aren't Gonna Need It) principle
+
+#### 5. All Tests Should Now Pass
+
+- The model MUST verify all tests pass after implementation
+- The model MUST fix failing tests with minimal changes
+- The model MUST NOT add new functionality if tests fail
+- The model MUST ensure all tests pass before proceeding to refactoring
+
+#### 6. Refactor as Needed
+
+- The model MUST refactor to improve code quality while maintaining functionality
+- The model MUST ensure all tests continue to pass after each refactor
+- The model SHOULD improve code structure, naming, and organization
+- The model MAY extract methods, remove duplication, or simplify conditionals
+- The model MUST NOT change behavior during refactoring
+
+### Repeat the Cycle
+
+- The model MUST continue the cycle with the next test on the list
+- The model MUST keep tests small and focused
+- The model SHOULD commit often during TDD cycles
+- The model MUST NOT test external libraries (unless suspicious behavior)
+
+## Development Principles
+
+### KISS (Keep It Simple, Stupid)
+
+- The model MUST write only necessary code
+- The model MUST avoid over-engineering
+- The model SHOULD prefer simple solutions first
+- The model MAY add complexity only when needed
+
+### YAGNI (You Aren't Gonna Need It)
+
+- The model MUST NOT add functionality until needed
+- The model MUST avoid speculative features
+- The model MUST focus on current requirements
+- The model SHOULD let design emerge from tests
+
+### Fake It Till You Make It
+
+- The model MAY start with simple implementations
+- The model MAY hard-code values initially
+- The model SHOULD generalize as more tests are added
+- The model MUST let tests drive the design
+
+## Test Structure
+
+### AAA Pattern (Arrange-Act-Assert)
+
+- The model MUST structure tests using the AAA pattern:
+  1. **Arrange (Setup)** - Put system in required state, create test data, configure dependencies
+  2. **Act (Execution)** - Trigger the behavior being tested, call the method
+  3. **Assert (Validation)** - Verify results are correct, check return values, verify state changes
+  4. **Cleanup (Optional)** - Restore pre-test state, release resources
+
+- The model MUST clearly separate these phases in test code
+- The model SHOULD keep the Act phase simple (usually one method call)
+- The model MUST ensure assertions are clear and specific
+
+## Best Practices
+
+### Test Code Quality
+
+- The model MUST treat test code like production code
+- The model MUST write readable and maintainable test code
+- The model MUST use well-structured and properly named tests
+- The model SHOULD document tests when needed
+- The model MUST ensure tests are reviewed by the team
+
+### Test Independence
+
+- The model MUST ensure each test starts from a known state
+- The model MUST NOT create tests that depend on other tests
+- The model MUST NOT create tests that affect other tests
+- The model MUST ensure tests can run in any order
+- The model MUST isolate each test
+
+### Test Focus
+
+- The model MUST keep tests focused on one thing at a time
+- The model MUST write small, focused test cases
+- The model MUST use clear test names that describe what is tested
+- The model SHOULD use single assertion when possible
+- The model MUST ensure tests are easy to understand
+
+### Test Performance
+
+- The model MUST keep tests fast
+- The model MUST avoid process boundaries in unit tests
+- The model MUST avoid network connections in unit tests
+- The model MUST avoid external dependencies in unit tests
+- The model SHOULD use test doubles (mocks, stubs, fakes) for dependencies
+- The model MUST separate slow integration tests from fast unit tests
+
+### Test Maintenance
+
+- The model MUST maintain the test suite regularly
+- The model SHOULD refactor tests regularly
+- The model MUST remove duplicate test code
+- The model SHOULD extract test utilities
+- The model MUST keep tests up to date
+- The model MUST fix broken tests immediately
+
+## Anti-Patterns to Avoid
+
+### Test Dependencies
+
+- The model MUST NOT make tests depend on execution order
+- The model MUST NOT share state between tests
+- The model MUST NOT create interdependent tests
+- The model MUST NOT assume specific test sequence
+
+### Over-Testing
+
+- The model MUST NOT test implementation details
+- The model MUST NOT create "all-knowing oracles"
+- The model MUST NOT test external libraries
+- The model MUST NOT test simple getters/setters only
+
+### Slow Tests
+
+- The model MUST NOT test precise timing in unit tests
+- The model MUST NOT test performance in unit tests
+- The model MUST NOT use real databases in unit tests
+- The model MUST NOT make network calls in unit tests
+
+### Poor Test Design
+
+- The model MUST NOT hard-code test data in production code
+- The model MUST NOT create fragile tests
+- The model MUST NOT write unclear test names
+- The model MUST NOT ignore failing tests
+
+## Test Doubles
+
+### Types of Test Doubles
+
+- **Stub:** Provides canned responses, no logic, returns predetermined values
+- **Mock:** Verifies interactions, records calls, asserts expectations
+- **Fake:** Working implementation, simplified version, in-memory database
+- **Spy:** Wraps real object, records interactions, partial mocking
+- **Dummy:** Placeholder object, never actually used, satisfies parameter list
+
+### When to Use Test Doubles
+
+- The model SHOULD use test doubles for external dependencies (databases, APIs)
+- The model SHOULD use test doubles for slow operations
+- The model SHOULD use test doubles for non-deterministic behavior
+- The model SHOULD use test doubles for hard-to-trigger conditions
+- The model MUST use test doubles to isolate the unit under test
+
+## TDD Variants
+
+### ATDD (Acceptance Test-Driven Development)
+
+- The model MAY use ATDD for customer requirements
+- The model MUST write tests from customer perspective
+- The model MUST make tests readable by non-technical stakeholders
+- The model SHOULD use ATDD to drive traditional TDD
+
+### BDD (Behavior-Driven Development)
+
+- The model MAY use BDD to combine TDD and ATDD
+- The model MUST use BDD for behavior-focused testing
+- The model SHOULD use Given-When-Then syntax for BDD scenarios
+- The model MUST use shared language for all stakeholders
+
+### UTDD (Unit Test-Driven Development)
+
+- The model MUST use UTDD for traditional TDD
+- The model MUST focus on unit-level tests
+- The model MUST ensure fast feedback from unit tests
+
+## Integration with Other Practices
+
+### TDD + BDD
+
+- The model MUST use TDD for unit tests (inside-out)
+- The model MUST use BDD for acceptance tests (outside-in)
+- The model MUST understand: TDD defines how, BDD defines what
+- The model SHOULD combine both practices in development workflow
+
+### TDD + Refactoring
+
+- The model MUST refactor continuously during the Green phase
+- The model MUST ensure all tests pass after refactoring
+- The model SHOULD use tests as a safety net for refactoring
+- The model MUST improve code quality while maintaining behavior
+
+### TDD + Continuous Integration
+
+- The model MUST run tests automatically in CI/CD pipelines
+- The model MUST ensure fast feedback from automated tests
+- The model SHOULD prevent integration issues through continuous testing
+- The model MUST maintain quality through automated test execution
+
+## Project-Specific TDD Guidelines
+
+### For KCDNUG.WideWorldImporters
+
+- The model MUST use **MSTest** as the test framework for this project
+- The model MUST create unit tests in the `KCDNUG.WideWorldImporters.AspireApp.Tests` project
+- The model MUST create integration tests in appropriate test projects
+- The model MUST write tests for business logic in domain services
+- The model MUST write tests for API controllers and endpoints
+- The model MUST use test doubles for Entity Framework DbContext in unit tests
+- The model SHOULD use test doubles for HTTP clients and external services
+- The model MUST test domain models and business rules
+- The model MUST test API service endpoints
+- The model SHOULD test integration between components
+- The model MUST ensure tests are fast and isolated
+- The model MUST follow AAA pattern in all test methods
+
+## TDD Workflow for Feature Development
+
+### Step 1: List Scenarios
+
+- The model MUST identify all scenarios before writing code
+- The model MUST list basic cases, edge cases, and error conditions
+- The model SHOULD prioritize scenarios by importance
+
+### Step 2: Write Failing Test
+
+- The model MUST write a test for the first scenario
+- The model MUST ensure the test fails for the right reason
+- The model MUST use descriptive test names
+
+### Step 3: Make Test Pass
+
+- The model MUST write minimal code to make the test pass
+- The model MAY use hard-coded values initially
+- The model MUST NOT add unnecessary functionality
+
+### Step 4: Refactor
+
+- The model MUST refactor to improve code quality
+- The model MUST ensure all tests still pass
+- The model SHOULD improve naming and structure
+
+### Step 5: Repeat
+
+- The model MUST continue with the next scenario
+- The model MUST repeat the cycle until all scenarios are implemented
+- The model SHOULD commit after each passing cycle
+
+## Modern TDD Practices
+
+### Cloud-Native TDD
+
+- The model MAY use Testcontainers for integration testing
+- The model SHOULD test containerized components in isolation
+- The model MUST use test doubles for external services
+- The model SHOULD test service contracts and boundaries
+
+### Microservices TDD
+
+- The model MUST test service boundaries and contracts
+- The model SHOULD use contract testing for microservices
+- The model MUST test event-driven interactions
+- The model SHOULD isolate services in tests
+
+### Security-Focused TDD
+
+- The model MUST treat security as a functional requirement
+- The model MUST write tests for security vulnerabilities
+- The model MUST test input validation and sanitization
+- The model MUST test access control and authorization
+
+### Performance-Oriented TDD
+
+- The model MAY write performance tests as functional requirements
+- The model MUST separate performance tests from unit tests
+- The model SHOULD test performance-critical paths
+- The model MUST ensure performance tests are deterministic
+
+## Key Takeaways
+
+The model MUST remember:
+
+1. **Red-Green-Refactor** - The core TDD cycle
+2. **Tests First** - Write tests before production code
+3. **Small Steps** - One test at a time
+4. **Simple Code** - Write just enough to pass
+5. **Refactor Continuously** - Improve while maintaining tests
+6. **Fast Feedback** - Quick test execution
+7. **Test Independence** - No dependencies between tests
+8. **Design Driver** - Tests drive better design
+9. **Not a Silver Bullet** - Has limitations and costs
+10. **Discipline Required** - Consistent practice needed
+
+## Summary
+
+Test-Driven Development is a powerful discipline that leads to better-designed, more maintainable, and more reliable code. The model MUST:
+
+1. Follow the Red-Green-Refactor cycle strictly
+2. Write tests before production code
+3. Keep tests small, focused, and independent
+4. Write minimal code to make tests pass
+5. Refactor continuously while maintaining passing tests
+6. Use test doubles to isolate units under test
+7. Treat test code with the same care as production code
+8. Integrate TDD with BDD for comprehensive testing
+9. Use MSTest for .NET projects in this codebase
+10. Ensure tests are fast, isolated, and maintainable
+
+The model MUST balance the benefits of TDD (better design, fewer defects, increased confidence) against the costs (increased code volume, time investment, maintenance overhead) and use TDD appropriately for complex business logic where maintainability and reliability are critical.
+
+The model MUST understand that TDD is most valuable for complex business logic in long-lived systems where maintainability and reliability are critical. For simple applications, prototypes, or UI-heavy work, the overhead may outweigh the benefits.

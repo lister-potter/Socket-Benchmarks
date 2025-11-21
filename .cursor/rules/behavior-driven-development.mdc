@@ -1,0 +1,317 @@
+---
+alwaysApply: true
+---
+# Behavior-Driven Development (BDD) Guidelines
+
+## Overview
+
+Behavior-Driven Development (BDD) is a software development approach that uses domain language to describe the behavior of code through natural-language constructs. BDD is a refinement of Test-Driven Development (TDD), combining TDD techniques with ideas from Domain-Driven Design (DDD).
+
+**Key Concept:** BDD uses a domain-specific language (DSL) with natural-language constructs (English-like sentences) to express behavior and expected outcomes.
+
+**Primary Goal:** Encourage collaboration among developers, QA experts, and customer representatives through shared understanding of application behavior.
+
+## Core Principles
+
+### 1. Outside-In Development
+
+- The model MUST start with business requirements (outside) and work inward to implementation
+- The model MUST define desired behavior from business perspective first
+- The model MUST specify behavior in business terms before implementation
+- The model SHOULD verify behavior is achieved after implementation
+
+### 2. Ubiquitous Language
+
+- The model MUST use a semi-formal language shared by all team members
+- The model MUST use domain terminology consistent with business stakeholders
+- The model SHOULD reduce communication breakdowns through shared vocabulary
+- The model MUST enable reasoning about specifications using business language
+
+### 3. Behavioral Specifications
+
+- The model MUST focus on specifying behavior in terms of business value, not technical implementation
+- The model MUST use user stories with explicit scenarios
+- The model MUST structure specifications as: Title, Narrative (As a... I want... So that...), Acceptance Criteria (Given... When... Then...)
+
+## The Gherkin Language
+
+### Structure Requirements
+
+- The model MUST use Gherkin format for BDD specifications when creating feature files
+- The model MUST format user stories with:
+  - Explicit, descriptive title
+  - Narrative: "As a [role/actor/stakeholder] I want [feature/capability] So that [benefit/value]"
+  - Acceptance Criteria: "Given [initial context] When [event occurs] Then [expected outcome]"
+
+### Gherkin Keywords
+
+- **Feature:** High-level description of functionality - The model MUST use this for feature files
+- **Scenario:** Specific example of behavior - The model MUST use this for each test case
+- **Given:** Preconditions/initial context - The model MUST use this to set up state
+- **When:** Action/event that triggers behavior - The model MUST use this for user actions or system events
+- **Then:** Expected outcome/result - The model MUST use this for assertions and verifications
+- **And/But:** Additional steps - The model MAY use these to extend Given/When/Then clauses
+- **Background:** Common steps for all scenarios - The model SHOULD use this to avoid repetition
+- **Scenario Outline:** Template for multiple similar scenarios - The model SHOULD use this for data-driven tests
+- **Examples:** Data table for scenario outline - The model MUST use this with Scenario Outline
+
+### Writing Gherkin Scenarios
+
+- The model MUST write scenarios in declarative style (business-focused), not imperative style (UI-focused)
+- The model MUST focus on WHAT the system does, not HOW it does it
+- The model MUST avoid UI implementation details in scenarios
+- The model MUST keep scenarios independent (each scenario stands alone)
+- The model MUST test one behavior per scenario
+- The model SHOULD use Background for common setup steps
+- The model SHOULD use Scenario Outline for similar test cases with different data
+
+### Declarative vs Imperative Style
+
+**The model MUST use declarative style (preferred):**
+- Focuses on WHAT - Business behavior
+- Resilient to UI changes
+- Easy to read
+- Business-focused
+- Implementation-independent
+
+**The model MUST NOT use imperative style (avoid):**
+- Focuses on HOW - UI interactions
+- Brittle (breaks when UI changes)
+- Hard to read
+- Mixes behavior with implementation
+- Not business-focused
+
+## BDD Process
+
+### 1. Discovery Phase
+
+- The model MUST conduct collaborative exploration of requirements
+- The model SHOULD facilitate Three Amigos meetings (Business, Development, Testing)
+- The model MUST identify scenarios through example mapping
+- The model MUST output user stories and scenarios in Gherkin format
+
+### 2. Formulation Phase
+
+- The model MUST convert examples into executable specifications
+- The model MUST write Gherkin scenarios
+- The model SHOULD review scenarios with stakeholders
+- The model MUST ensure clarity and business focus in scenarios
+
+### 3. Automation Phase
+
+- The model MUST implement step definitions for Gherkin scenarios
+- The model MUST connect step definitions to application code
+- The model SHOULD make scenarios executable
+- The model MUST run scenarios to validate behavior
+
+### 4. Implementation Phase
+
+- The model MUST build features to satisfy scenarios
+- The model MUST make scenarios pass through implementation
+- The model SHOULD refactor while maintaining passing scenarios
+- The model MUST iterate until all scenarios pass
+
+## Three Amigos Practice
+
+### Collaborative Requirements
+
+- The model MUST facilitate collaboration between three roles:
+  - **Business (Product Owner):** Defines problem and business value
+  - **Development (Developers):** Suggests solutions and identifies technical constraints
+  - **Testing (QA):** Questions solution, brings up edge cases, ensures precision
+- The model MUST ensure all three perspectives are considered
+- The model SHOULD document scenarios collaboratively
+- The model MUST identify missing specifications through collaboration
+
+## BDD Best Practices
+
+### Writing Good Scenarios
+
+- The model MUST focus on behavior, not implementation
+- The model MUST keep scenarios independent (no dependencies between scenarios)
+- The model MUST use declarative style (business-focused)
+- The model MUST test one behavior per scenario
+- The model SHOULD use Background for common steps
+- The model SHOULD use Scenario Outline for similar cases with different data
+
+### Writing Step Definitions
+
+- The model MUST keep steps reusable and generic
+- The model MUST parameterize steps when appropriate
+- The model MUST avoid logic in step definitions (delegate to application code)
+- The model SHOULD use Page Objects for UI testing
+- The model MUST handle state carefully (clean state between scenarios)
+- The model MUST avoid global state
+
+## BDD Anti-Patterns to Avoid
+
+### Implementation-Focused Scenarios
+
+- The model MUST NOT write scenarios that focus on UI implementation details
+- The model MUST NOT include specific element IDs, CSS selectors, or DOM manipulation in scenarios
+- The model MUST NOT write scenarios that describe "clicking buttons" or "entering text in fields"
+- The model MUST write scenarios that describe business behavior instead
+
+### Overly Technical Language
+
+- The model MUST NOT use database queries, API endpoints, or technical implementation details in scenarios
+- The model MUST NOT use technical jargon that business stakeholders cannot understand
+- The model MUST use business domain language in scenarios
+
+### Scenario Interdependence
+
+- The model MUST NOT create scenarios that depend on other scenarios
+- The model MUST ensure each scenario can run independently
+- The model SHOULD use Background or explicit setup when scenarios share common context
+
+### Vague or Ambiguous Steps
+
+- The model MUST NOT write vague steps like "something happens" or "some state"
+- The model MUST use specific, concrete language in all steps
+- The model MUST ensure steps are unambiguous and testable
+
+### Testing Implementation Details
+
+- The model MUST NOT test low-level implementation details in BDD scenarios
+- The model MUST focus on business behavior and outcomes
+- The model SHOULD use unit tests (TDD) for implementation details, not BDD scenarios
+
+## When to Use BDD
+
+### Good Fit For
+
+- The model SHOULD use BDD for:
+  - Complex business logic with rich domain rules
+  - Features with multiple stakeholders
+  - Ambiguous requirements needing clarification
+  - Customer-facing features and user workflows
+  - Long-lived systems needing living documentation
+  - End-to-end acceptance testing
+
+### Less Suitable For
+
+- The model SHOULD NOT use BDD for:
+  - Simple CRUD operations with minimal business logic
+  - Low-level utilities and infrastructure code
+  - Performance-critical code
+  - Prototypes or throwaway code
+  - Unit-level testing (use TDD instead)
+
+## BDD Tools and Frameworks
+
+### Story-Based Tools
+
+- The model MAY use story-based BDD tools for acceptance testing:
+  - **SpecFlow** (.NET) - The model SHOULD use this for .NET projects
+  - **Cucumber** (Ruby, Java, JavaScript) - Popular multi-language tool
+  - **Behat** (PHP) - For PHP projects
+  - **JBehave** (Java) - Java-based BDD
+  - **Behave** (Python) - Python BDD framework
+
+### Specification-Based Tools
+
+- The model MAY use specification-based BDD tools for unit-level specifications:
+  - **RSpec** (Ruby) - Describe-it syntax
+  - **Jasmine** (JavaScript) - JavaScript testing
+  - **Mocha** (JavaScript) - Flexible JavaScript testing
+
+## Integration with Other Practices
+
+### BDD + TDD
+
+- The model MUST use BDD for acceptance tests (outside-in)
+- The model MUST use TDD for unit tests (inside-out)
+- The model MUST understand: BDD defines what, TDD defines how
+- The model SHOULD combine both practices in development workflow
+
+### BDD + DDD
+
+- The model MUST use ubiquitous language from DDD in BDD scenarios
+- The model MUST ensure behavior specifications use domain language
+- The model SHOULD leverage domain understanding in BDD scenarios
+
+### BDD + Agile
+
+- The model MUST integrate BDD with user stories
+- The model MUST use BDD for acceptance criteria
+- The model SHOULD use BDD in iterative development cycles
+- The model MUST ensure continuous feedback through BDD scenarios
+
+## Project-Specific BDD Guidelines
+
+### For KCDNUG.WideWorldImporters
+
+- The model MUST use **Reqnroll (SpecFlow)** for BDD testing in this project
+- The model MUST create feature files in the `KCDNUG.WideWorldImporters.FunctionalTests` project
+- The model MUST organize features in the `Features/` folder
+- The model MUST implement step definitions in the `StepDefinitions/` folder
+- The model MUST use MSTest as the test framework (as configured in the project)
+- The model MUST write scenarios for business-critical features in the Wide World Importers domain:
+  - Sales entities: Customers, Orders, Invoices, CustomerTransactions
+  - Purchasing entities: Suppliers, PurchaseOrders, SupplierTransactions
+  - Warehouse entities: StockItems, StockGroups, StockItemTransactions
+- The model MUST use domain terminology from the Wide World Importers domain models
+- The model SHOULD create scenarios that test end-to-end workflows across the distributed application
+- The model SHOULD test integration between Web frontend and API service
+- The model MUST ensure scenarios are executable and serve as living documentation
+
+## BDD Workflow for Feature Development
+
+### Step 1: Write Feature File
+
+- The model MUST create a `.feature` file with Gherkin syntax
+- The model MUST include Feature title, Narrative, and Scenarios
+- The model MUST use Given-When-Then format for scenarios
+
+### Step 2: Run Scenarios (They Fail Initially)
+
+- The model MUST run scenarios to see undefined step definitions
+- The model MUST identify which steps need implementation
+
+### Step 3: Implement Step Definitions
+
+- The model MUST implement step definitions in C# (for SpecFlow/Reqnroll)
+- The model MUST connect step definitions to application code
+- The model MUST keep step definitions thin (delegate to application code)
+
+### Step 4: Implement Production Code
+
+- The model MUST write production code to make scenarios pass
+- The model MUST follow TDD principles for unit-level code
+- The model MUST ensure code satisfies the behavior specified in scenarios
+
+### Step 5: Run Scenarios (They Pass)
+
+- The model MUST verify all scenarios pass
+- The model MUST ensure scenarios serve as regression tests
+- The model SHOULD use scenarios as living documentation
+
+## Key Takeaways
+
+The model MUST remember:
+
+1. **Behavior Over Implementation** - Focus on what, not how
+2. **Ubiquitous Language** - Shared vocabulary for all team members
+3. **Given-When-Then** - Standard format for scenarios
+4. **Three Amigos** - Collaborative requirement exploration
+5. **Living Documentation** - Executable specifications
+6. **Outside-In** - Start with business value
+7. **Declarative Style** - Business language, not UI details
+8. **Collaboration** - Developers, QA, and business together
+9. **Concrete Examples** - Scenarios illustrate requirements
+10. **TDD Evolution** - BDD is a refinement of test-driven development
+
+## Summary
+
+Behavior-Driven Development extends Test-Driven Development by emphasizing collaboration, shared understanding, and business-focused specifications. The model MUST:
+
+1. Use natural language (Gherkin) to describe behavior
+2. Involve all stakeholders in defining requirements through concrete examples
+3. Create executable specifications that serve as both tests and living documentation
+4. Focus on business behavior, not technical implementation
+5. Use declarative style scenarios that are resilient to change
+6. Integrate BDD with TDD for comprehensive testing strategy
+7. Use SpecFlow/Reqnroll for .NET projects in this codebase
+8. Ensure scenarios are independent, testable, and business-focused
+
+The model MUST balance the benefits of BDD (collaboration, living documentation, better requirements) against the costs (additional tooling, maintenance, time investment) and use BDD appropriately for complex business logic where stakeholder collaboration is essential.
