@@ -42,21 +42,16 @@ public class MessageRouter : IMessageRouter
                 if (type == "JoinLot" || type == "PlaceBid")
                 {
                     // These are incoming auction messages - MUST process, never echo
-                    Console.WriteLine($"Received auction message type: {type} from client {clientId}");
                     var auctionMessage = AuctionMessage.Deserialize(message);
                     if (auctionMessage != null)
                     {
-                        Console.WriteLine($"Successfully deserialized {type} message, processing...");
                         await HandleAuctionMessageAsync(auctionMessage, webSocket, clientId);
-                        Console.WriteLine($"Finished processing {type} message for client {clientId}");
                         return;
                     }
                     else
                     {
                         // Deserialization failed but we know it's an auction message
                         // Send error response instead of echoing
-                        Console.WriteLine($"Failed to deserialize auction message with type: {type}");
-                        Console.WriteLine($"Message was: {message.Substring(0, Math.Min(200, message.Length))}");
                         await SendErrorAsync(webSocket, $"Invalid auction message format");
                         return;
                     }
@@ -69,19 +64,16 @@ public class MessageRouter : IMessageRouter
                 }
             }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
             // Invalid JSON - echo it back (might be a non-auction message)
-            Console.WriteLine($"Invalid JSON received: {ex.Message}");
             await EchoMessageAsync(message, webSocket);
             return;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // Other errors during routing - log but don't crash
+            // Other errors during routing - don't crash
             // Only echo if we're sure it's not an auction message
-            Console.WriteLine($"Error routing message: {ex.Message}");
-            Console.WriteLine($"Message was: {message.Substring(0, Math.Min(200, message.Length))}");
             
             // Try to check if it's an auction message before echoing
             try
@@ -155,14 +147,12 @@ public class MessageRouter : IMessageRouter
 
     private async Task HandlePlaceBidAsync(PlaceBidMessage message, WebSocket webSocket, string clientId)
     {
-        Console.WriteLine($"Processing PlaceBid: lot={message.LotId}, bidder={message.BidderId}, amount={message.Amount}");
         try
         {
             var result = await _bidService.PlaceBidAsync(message.LotId, message.BidderId, message.Amount);
             
             if (result.Success)
             {
-                Console.WriteLine($"Bid succeeded, sending LotUpdate for lot {message.LotId}");
                 var update = new LotUpdateMessage
                 {
                     LotId = result.UpdatedLot!.LotId,
@@ -171,19 +161,14 @@ public class MessageRouter : IMessageRouter
                     Status = result.UpdatedLot.Status.ToString()
                 };
                 await SendMessageAsync(webSocket, update);
-                Console.WriteLine($"Sent LotUpdate to client {clientId}");
             }
             else
             {
-                Console.WriteLine($"Bid failed: {result.ErrorMessage}, sending Error to client {clientId}");
                 await SendErrorAsync(webSocket, result.ErrorMessage ?? "Bid failed");
-                Console.WriteLine($"Sent Error to client {clientId}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception in HandlePlaceBidAsync: {ex.GetType().Name}: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             await SendErrorAsync(webSocket, $"Error processing bid: {ex.Message}");
         }
     }
@@ -209,24 +194,17 @@ public class MessageRouter : IMessageRouter
             {
                 var context = AuctionMessageJsonContext.Default;
                 var json = JsonSerializer.Serialize(message, context.LotUpdateMessage);
-                Console.WriteLine($"Serialized LotUpdate: {json}");
                 var bytes = Encoding.UTF8.GetBytes(json);
                 await webSocket.SendAsync(
                     new ArraySegment<byte>(bytes),
                     WebSocketMessageType.Text,
                     true,
                     CancellationToken.None);
-                Console.WriteLine($"Successfully sent LotUpdate message ({bytes.Length} bytes)");
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Exception in SendMessageAsync: {ex.GetType().Name}: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                // Silently ignore send errors
             }
-        }
-        else
-        {
-            Console.WriteLine($"Cannot send LotUpdate - WebSocket state is {webSocket.State}");
         }
     }
 
@@ -239,24 +217,17 @@ public class MessageRouter : IMessageRouter
                 var error = new ErrorMessage { Message = errorMessage };
                 var context = AuctionMessageJsonContext.Default;
                 var json = JsonSerializer.Serialize(error, context.ErrorMessage);
-                Console.WriteLine($"Serialized Error: {json}");
                 var bytes = Encoding.UTF8.GetBytes(json);
                 await webSocket.SendAsync(
                     new ArraySegment<byte>(bytes),
                     WebSocketMessageType.Text,
                     true,
                     CancellationToken.None);
-                Console.WriteLine($"Successfully sent Error message ({bytes.Length} bytes)");
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Exception in SendErrorAsync: {ex.GetType().Name}: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                // Silently ignore send errors
             }
-        }
-        else
-        {
-            Console.WriteLine($"Cannot send Error - WebSocket state is {webSocket.State}");
         }
     }
 }

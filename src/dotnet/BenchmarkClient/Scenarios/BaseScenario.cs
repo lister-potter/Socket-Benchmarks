@@ -32,11 +32,6 @@ public abstract class BaseScenario : IScenario
         {
             resourceMonitor = new ResourceMonitor();
             resourceMonitor.StartMonitoring(config.ServerProcessId.Value);
-            Console.WriteLine($"Resource monitoring active for server PID: {config.ServerProcessId.Value}");
-        }
-        else
-        {
-            Console.WriteLine("Resource monitoring disabled (no server PID available)");
         }
 
         try
@@ -46,17 +41,6 @@ public abstract class BaseScenario : IScenario
             
             // Filter to only connected connections for receiving
             var connectedConnections = connections.Where(c => c.IsConnected).ToList();
-            Console.WriteLine($"Created {connections.Count} connections, {connectedConnections.Count} are connected");
-            
-            // Diagnostic: Log WebSocket states for debugging
-            if (connectedConnections.Count < connections.Count && connections.Count > 0)
-            {
-                var stateCounts = connections
-                    .GroupBy(c => c.WebSocket?.State.ToString() ?? "null")
-                    .Select(g => $"{g.Key}: {g.Count()}")
-                    .ToList();
-                Console.WriteLine($"WebSocket state breakdown: {string.Join(", ", stateCounts)}");
-            }
             
             // Update config.ClientCount to reflect actual connected clients for accurate reporting
             config.ClientCount = connectedConnections.Count;
@@ -65,8 +49,6 @@ public abstract class BaseScenario : IScenario
             // Use Task.Run to ensure they run on thread pool threads concurrently
             var receiveTasks = connectedConnections.Select(c => 
                 Task.Run(() => ReceiveMessagesAsync(c, metricsCollector, latencyTracker, bidMetricsCollector, cancellationTokenSource.Token), cancellationTokenSource.Token)).ToArray();
-            
-            Console.WriteLine($"Started {receiveTasks.Length} receive tasks for connected clients");
 
             // Start sending messages (MessageSender will filter to connected connections)
             var sendTask = messageSender.StartSendingAsync(
@@ -118,10 +100,6 @@ public abstract class BaseScenario : IScenario
                 metrics.BidMetrics = bidMetricsCollector.GetMetrics();
             }
             
-            // Log final connection count for debugging
-            Console.WriteLine($"\nScenario completed. Final client count: {config.ClientCount}");
-            Console.WriteLine($"Total connections created: {connections.Count}, Connected: {connectedConnections.Count}");
-            
             // Add resource usage if available
             if (resourceMonitor != null)
             {
@@ -159,9 +137,6 @@ public abstract class BaseScenario : IScenario
         int receiveAttempts = 0;
         int messagesReceived = 0;
         
-        // Diagnostic: Log when receive task starts
-        Console.WriteLine($"Receive task started for client {connection.ClientId}, WebSocket state: {connection.WebSocket?.State}, IsConnected: {connection.IsConnected}");
-        
         // Ensure we start receiving even if connection state check fails
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -192,18 +167,11 @@ public abstract class BaseScenario : IScenario
                 // Verify WebSocket is still open before receiving
                 if (connection.WebSocket.State != WebSocketState.Open)
                 {
-                    Console.WriteLine($"Client {connection.ClientId}: WebSocket state is {connection.WebSocket.State}, exiting receive loop");
                     connection.IsConnected = false;
                     break;
                 }
 
                 receiveAttempts++;
-                
-                // Diagnostic: Log first few receive attempts
-                if (receiveAttempts <= 3)
-                {
-                    Console.WriteLine($"Client {connection.ClientId}: Attempting to receive (attempt {receiveAttempts})");
-                }
                 
                 var buffer = new byte[1024 * 64];
                 var result = await connection.WebSocket.ReceiveAsync(
@@ -211,12 +179,6 @@ public abstract class BaseScenario : IScenario
                     cancellationToken);
                 
                 messagesReceived++;
-                
-                // Diagnostic: Log successful receive
-                if (messagesReceived <= 3)
-                {
-                    Console.WriteLine($"Client {connection.ClientId}: Received data, MessageType: {result.MessageType}, Count: {result.Count}, EndOfMessage: {result.EndOfMessage}");
-                }
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -235,12 +197,6 @@ public abstract class BaseScenario : IScenario
                     {
                         receivedJson = System.Text.Encoding.UTF8.GetString(messageBytes.ToArray());
                         connection.MessagesReceived++;
-                        
-                        // Debug: Log first few messages to verify they're being received
-                        if (connection.MessagesReceived <= 3)
-                        {
-                            Console.WriteLine($"Client {connection.ClientId}: Received message {connection.MessagesReceived}: {receivedJson.Substring(0, Math.Min(100, receivedJson.Length))}...");
-                        }
                     }
                     else
                     {
@@ -289,23 +245,20 @@ public abstract class BaseScenario : IScenario
             catch (OperationCanceledException)
             {
                 // Cancellation requested - exit gracefully
-                Console.WriteLine($"Client {connection.ClientId}: Receive loop cancelled (OperationCanceledException)");
                 break;
             }
-            catch (WebSocketException ex)
+            catch (WebSocketException)
             {
                 // WebSocket-specific error - connection is likely broken
-                Console.WriteLine($"Client {connection.ClientId}: WebSocketException in receive loop: {ex.Message}");
                 connection.IsConnected = false;
                 break;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Other exceptions - log but try to continue
+                // Other exceptions - try to continue
                 // Don't mark as disconnected unless it's a fatal error
                 // Many exceptions can be transient and the connection might recover
                 var wsState = connection.WebSocket?.State ?? WebSocketState.None;
-                Console.WriteLine($"Client {connection.ClientId}: Exception in receive loop: {ex.GetType().Name}: {ex.Message}, WebSocket state: {wsState}");
                 
                 if (wsState == WebSocketState.Closed || wsState == WebSocketState.Aborted)
                 {
@@ -325,9 +278,6 @@ public abstract class BaseScenario : IScenario
                 continue;
             }
 
-            // Debug: Log that we're about to process a message - FORCE LOGGING FOR ALL MESSAGES
-            Console.WriteLine($"Client {connection.ClientId}: PROCESSING message {connection.MessagesReceived}, JSON: {receivedJson.Substring(0, Math.Min(200, receivedJson.Length))}");
-
             var receivedTime = DateTime.UtcNow;
             var receivedTimestamp = Stopwatch.GetTimestamp();
             
@@ -343,7 +293,6 @@ public abstract class BaseScenario : IScenario
                 {
                     messageType = typeCheck.GetString();
                     isAuctionMessage = true;
-                    Console.WriteLine($"Client {connection.ClientId}: Detected auction message type: {messageType}");
                 }
             }
             catch
@@ -358,7 +307,6 @@ public abstract class BaseScenario : IScenario
                 if (message != null && (message.MessageId > 0 || message.ClientId > 0 || message.Payload.Length > 0))
                 {
                     // Echo mode message with meaningful values
-                    Console.WriteLine($"Client {connection.ClientId}: Parsed as BenchmarkMessage (echo mode), MessageId={message.MessageId}, ClientId={message.ClientId}");
                     latencyTracker.RecordReceived(message.MessageId, receivedTimestamp);
                     
                     var measurements = latencyTracker.GetMeasurements();
@@ -367,7 +315,6 @@ public abstract class BaseScenario : IScenario
                     
                     if (latencyMs > 0)
                     {
-                        Console.WriteLine($"Client {connection.ClientId}: Recording echo message with latency {latencyMs:F2}ms");
                         metricsCollector.RecordMessageReceived(
                             receivedTime,
                             message.ClientId,
@@ -381,22 +328,14 @@ public abstract class BaseScenario : IScenario
             // At this point, it's an auction message or an invalid message
             if (!isAuctionMessage)
             {
-                Console.WriteLine($"Client {connection.ClientId}: Message does not appear to be a BenchmarkMessage or auction message, skipping");
                 continue;
             }
-            
-            Console.WriteLine($"Client {connection.ClientId}: Processing auction message type: {messageType}");
 
             // Check if it's an echoed outgoing message
             bool isEchoedMessage = false;
             if (messageType == "PlaceBid" || messageType == "JoinLot")
             {
                 isEchoedMessage = true;
-                Console.WriteLine($"Client {connection.ClientId}: Detected echoed {messageType} message (will record for throughput but skip bid processing)");
-            }
-            else if (messageType == "LotUpdate" || messageType == "Error")
-            {
-                Console.WriteLine($"Client {connection.ClientId}: Processing server response: {messageType}, JSON: {receivedJson.Substring(0, Math.Min(150, receivedJson.Length))}");
             }
 
             // CRITICAL: Record ALL received messages for throughput metrics BEFORE filtering
@@ -422,7 +361,6 @@ public abstract class BaseScenario : IScenario
             }
             
             // ALWAYS record received messages for throughput metrics (even echoed ones)
-            Console.WriteLine($"Client {connection.ClientId}: Recording received message for throughput, messageId={messageId}, sentTimestamp={sentTimestamp}, isEchoed={isEchoedMessage}");
             if (messageId.HasValue && sentTimestamp.HasValue && !isEchoedMessage)
             {
                 // Calculate latency using monotonic time for actual server responses
@@ -432,7 +370,6 @@ public abstract class BaseScenario : IScenario
                 // Always record if we have valid latency (even if small)
                 if (latencyMs >= 0)
                 {
-                    Console.WriteLine($"Client {connection.ClientId}: Recording server response with latency {latencyMs:F2}ms");
                     metricsCollector.RecordMessageReceived(
                         receivedTime,
                         connection.ClientId,
@@ -454,7 +391,6 @@ public abstract class BaseScenario : IScenario
             {
                 // Echoed message or no matching message ID - still record for throughput metrics
                 // Use a placeholder message ID for unmatched/echoed messages
-                Console.WriteLine($"Client {connection.ClientId}: Recording echoed/unmatched message for throughput (messageId=-1, latency=0)");
                 metricsCollector.RecordMessageReceived(
                     receivedTime,
                     connection.ClientId,
@@ -465,7 +401,6 @@ public abstract class BaseScenario : IScenario
             // Skip bid metrics processing for echoed messages (they're not server responses)
             if (isEchoedMessage)
             {
-                Console.WriteLine($"Client {connection.ClientId}: Skipping bid metrics processing for echoed {messageType} message");
                 continue;
             }
             
@@ -525,8 +460,7 @@ public abstract class BaseScenario : IScenario
                 }
                 catch
                 {
-                    // Log parsing errors for debugging but don't crash
-                    // Console.WriteLine($"Error parsing auction message: {ex.Message}");
+                    // Silently ignore parsing errors
                 }
             }
             // Continue loop to process next message
