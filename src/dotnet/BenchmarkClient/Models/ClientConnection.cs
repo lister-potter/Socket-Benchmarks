@@ -88,6 +88,36 @@ public class ClientConnection
         }
     }
 
+    public async Task<bool> SendAuctionMessageAsync(string jsonMessage, DateTime sentTimestamp, CancellationToken cancellationToken)
+    {
+        if (WebSocket == null || WebSocket.State != WebSocketState.Open)
+        {
+            return false;
+        }
+
+        await _sendLock.WaitAsync(cancellationToken);
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(jsonMessage);
+            await WebSocket.SendAsync(
+                new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text,
+                true,
+                cancellationToken);
+            MessagesSent++;
+            return true;
+        }
+        catch
+        {
+            _isConnected = false;
+            return false;
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
     public async Task<BenchmarkMessage?> ReceiveMessageAsync(CancellationToken cancellationToken)
     {
         if (WebSocket == null || WebSocket.State != WebSocketState.Open)
@@ -115,6 +145,37 @@ public class ClientConnection
                 MessagesReceived++;
             }
             return message;
+        }
+        catch
+        {
+            IsConnected = false;
+            return null;
+        }
+    }
+
+    public async Task<string?> ReceiveAuctionMessageAsync(CancellationToken cancellationToken)
+    {
+        if (WebSocket == null || WebSocket.State != WebSocketState.Open)
+        {
+            return null;
+        }
+
+        try
+        {
+            var buffer = new byte[1024 * 64];
+            var result = await WebSocket.ReceiveAsync(
+                new ArraySegment<byte>(buffer),
+                cancellationToken);
+
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                _isConnected = false;
+                return null;
+            }
+
+            var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            MessagesReceived++;
+            return json;
         }
         catch
         {

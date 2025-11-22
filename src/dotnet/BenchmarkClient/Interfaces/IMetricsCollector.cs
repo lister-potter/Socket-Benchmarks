@@ -5,9 +5,10 @@ namespace BenchmarkClient.Interfaces;
 public interface IMetricsCollector
 {
     void RecordMessageSent(DateTime timestamp, int clientId, int messageId, int size);
-    void RecordMessageReceived(DateTime timestamp, int clientId, int messageId, TimeSpan latency);
+    void RecordMessageReceived(DateTime timestamp, int clientId, int messageId, double latencyMilliseconds);
     void RecordConnectionError(int clientId, string error);
     void RecordMessageMismatch(int clientId, int messageId);
+    void SetTestEndTime(DateTime endTime);
     BenchmarkMetrics GetMetrics();
 }
 

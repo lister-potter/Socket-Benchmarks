@@ -22,7 +22,20 @@ public class ResourceMonitor : IResourceMonitor
     public void StopMonitoring()
     {
         _cancellationTokenSource?.Cancel();
-        _monitoringTask?.Wait(TimeSpan.FromSeconds(5));
+        try
+        {
+            _monitoringTask?.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch (AggregateException ex) when (ex.InnerException is TaskCanceledException)
+        {
+            // Task was canceled, which is expected when stopping monitoring
+            // This is normal and not an error
+        }
+        catch (TaskCanceledException)
+        {
+            // Task was canceled, which is expected when stopping monitoring
+            // This is normal and not an error
+        }
     }
 
     public List<ResourceSnapshot> GetSnapshots()
@@ -53,7 +66,15 @@ public class ResourceMonitor : IResourceMonitor
                 // Ignore errors
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation requested, exit the loop
+                break;
+            }
         }
     }
 

@@ -11,6 +11,11 @@ public class BenchmarkMetrics
     public List<ResourceSnapshot> ResourceUsage { get; set; } = new();
     public DateTime TestStartTime { get; set; }
     public DateTime TestEndTime { get; set; }
+    
+    /// <summary>
+    /// Bid metrics for auction mode benchmarks. Null when not in auction mode.
+    /// </summary>
+    public BidMetrics? BidMetrics { get; set; }
 }
 
 public class LatencyPercentiles

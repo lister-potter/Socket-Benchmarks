@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BenchmarkClient.Interfaces;
 using BenchmarkClient.Models;
 
@@ -23,10 +24,12 @@ public class MetricsCollector : IMetricsCollector
             {
                 _testStartTime = timestamp;
             }
+            // Update test end time on send (fallback if no messages received)
+            _testEndTime = timestamp;
         }
     }
 
-    public void RecordMessageReceived(DateTime timestamp, int clientId, int messageId, TimeSpan latency)
+    public void RecordMessageReceived(DateTime timestamp, int clientId, int messageId, double latencyMilliseconds)
     {
         lock (_lock)
         {
@@ -35,11 +38,21 @@ public class MetricsCollector : IMetricsCollector
             {
                 MessageId = messageId,
                 ClientId = clientId,
-                SentTime = timestamp - latency,
-                ReceivedTime = timestamp,
-                Latency = latency
+                LatencyMilliseconds = latencyMilliseconds
             });
+            // Always update test end time when message received
             _testEndTime = timestamp;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the test end time explicitly (used when test completes).
+    /// </summary>
+    public void SetTestEndTime(DateTime endTime)
+    {
+        lock (_lock)
+        {
+            _testEndTime = endTime;
         }
     }
 

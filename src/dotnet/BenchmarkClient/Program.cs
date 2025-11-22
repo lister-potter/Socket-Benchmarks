@@ -1,3 +1,4 @@
+using BenchmarkClient.Interfaces;
 using BenchmarkClient.Models;
 using BenchmarkClient.Scenarios;
 using BenchmarkClient.Services;
@@ -9,17 +10,42 @@ if (args.Length == 0)
     Console.WriteLine("Options:");
     Console.WriteLine("  --server-url <url>     WebSocket server URL (default: ws://localhost:8080)");
     Console.WriteLine("  --server-language <lang>  Server language: dotnet, go, rust (default: dotnet)");
-    Console.WriteLine("  --server-pid <pid>    Server process ID for resource monitoring");
+    Console.WriteLine("  --server-pid <pid>    Server process ID for resource monitoring (auto-detected if not specified)");
     Console.WriteLine("  --client-count <n>    Number of concurrent clients (overrides scenario default)");
     Console.WriteLine("  --duration <seconds>   Test duration in seconds (default: 30)");
     Console.WriteLine("  --rate <msgs/sec>     Messages per second per client (default: 100)");
     Console.WriteLine("  --message-size <bytes> Message size in bytes (default: 64)");
     Console.WriteLine("  --pattern <pattern>   Message pattern: FixedRate, Burst, RampUp (default: FixedRate)");
+    Console.WriteLine("  --mode <mode>        Benchmark mode: Echo, Auction (default: Echo)");
     Environment.Exit(1);
 }
 
 var scenarioName = args[0];
 var config = ParseConfig(args);
+
+// Automatic PID detection if not explicitly provided
+if (!config.ServerProcessId.HasValue)
+{
+    var port = UrlPortExtractor.ExtractPort(config.ServerUrl);
+    if (port.HasValue)
+    {
+        var pidDetector = new PidDetector();
+        var detectedPid = pidDetector.DetectPidByPort(port.Value);
+        if (detectedPid.HasValue)
+        {
+            config.ServerProcessId = detectedPid;
+            Console.WriteLine($"Detected server PID: {detectedPid} (listening on port {port.Value})");
+        }
+    }
+    else
+    {
+        Console.WriteLine($"Error: Could not parse server URL '{config.ServerUrl}' to extract port. Skipping automatic PID detection.");
+    }
+}
+else
+{
+    Console.WriteLine($"Using explicit server PID: {config.ServerProcessId.Value}");
+}
 
 IScenario scenario = scenarioName switch
 {
@@ -33,6 +59,7 @@ config.ScenarioName = scenario.Name;
 
 Console.WriteLine($"Starting benchmark: {scenario.Name}");
 Console.WriteLine($"Server URL: {config.ServerUrl}");
+Console.WriteLine($"Mode: {config.Mode}");
 Console.WriteLine($"Duration: {config.Duration.TotalSeconds}s");
 Console.WriteLine($"Message rate: {config.MessagesPerSecondPerClient} msg/s per client");
 Console.WriteLine($"Target client count: {config.ClientCount} (will use scenario default if 1)");
@@ -104,6 +131,12 @@ static BenchmarkConfig ParseConfig(string[] args)
                 if (Enum.TryParse<MessagePattern>(args[++i], true, out var pattern))
                 {
                     config.Pattern = pattern;
+                }
+                break;
+            case "--mode" when i + 1 < args.Length:
+                if (Enum.TryParse<BenchmarkMode>(args[++i], true, out var mode))
+                {
+                    config.Mode = mode;
                 }
                 break;
         }

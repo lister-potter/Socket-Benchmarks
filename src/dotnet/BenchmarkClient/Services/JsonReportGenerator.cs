@@ -21,7 +21,8 @@ public class JsonReportGenerator : IReportGenerator
                 scenarioName = config.ScenarioName,
                 testStartTime = metrics.TestStartTime.ToString("O"),
                 testEndTime = metrics.TestEndTime.ToString("O"),
-                testDurationSeconds = (metrics.TestEndTime - metrics.TestStartTime).TotalSeconds
+                testDurationSeconds = (metrics.TestEndTime - metrics.TestStartTime).TotalSeconds,
+                mode = config.Mode.ToString()
             },
             clientConfig = new
             {
@@ -32,7 +33,7 @@ public class JsonReportGenerator : IReportGenerator
             },
             serverConfig = new
             {
-                port = ExtractPort(config.ServerUrl),
+                port = UrlPortExtractor.ExtractPort(config.ServerUrl) ?? 8080,
                 language = config.ServerLanguage,
                 buildConfiguration = config.ServerLanguage == "dotnet" ? "NativeAOT" : "default"
             },
@@ -58,6 +59,20 @@ public class JsonReportGenerator : IReportGenerator
                 totalMessageMismatches = metrics.TotalMessageMismatches,
                 errorRatePerSecond = metrics.TotalConnectionErrors / Math.Max(1, (metrics.TestEndTime - metrics.TestStartTime).TotalSeconds)
             },
+            bidMetrics = config.Mode == BenchmarkMode.Auction && metrics.BidMetrics != null ? new
+            {
+                totalBidsPlaced = metrics.BidMetrics.TotalBidsPlaced,
+                bidsAccepted = metrics.BidMetrics.BidsAccepted,
+                bidsFailed = metrics.BidMetrics.BidsFailed,
+                acceptanceRate = metrics.BidMetrics.AcceptanceRate,
+                failureRate = metrics.BidMetrics.FailureRate,
+                failureReasonBreakdown = new
+                {
+                    BidTooLow = metrics.BidMetrics.FailureReasonBreakdown.GetValueOrDefault(BidFailureReason.BidTooLow, 0),
+                    LotClosed = metrics.BidMetrics.FailureReasonBreakdown.GetValueOrDefault(BidFailureReason.LotClosed, 0),
+                    Error = metrics.BidMetrics.FailureReasonBreakdown.GetValueOrDefault(BidFailureReason.Error, 0)
+                }
+            } : null,
             resourceUsage = new
             {
                 cpu = metrics.ResourceUsage.Select(s => new
@@ -80,19 +95,6 @@ public class JsonReportGenerator : IReportGenerator
 
         var json = JsonSerializer.Serialize(report, options);
         File.WriteAllText(outputPath, json);
-    }
-
-    private static int ExtractPort(string url)
-    {
-        try
-        {
-            var uri = new Uri(url);
-            return uri.Port > 0 ? uri.Port : 8080;
-        }
-        catch
-        {
-            return 8080;
-        }
     }
 }
 

@@ -1,19 +1,27 @@
+using BenchmarkClient.Interfaces;
 using BenchmarkClient.Models;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Text.Json;
 
 namespace BenchmarkClient.Services;
 
 public class MessageSender
 {
     private readonly BenchmarkConfig _config;
+    private readonly IBidMetricsCollector? _bidMetricsCollector;
     private int _nextMessageId = 1;
+    private int _nextBidId = 1;
     private readonly Random _random = new();
     private Stopwatch? _testStopwatch;
+    // Track lot subscriptions per client for auction mode (thread-safe)
+    private readonly ConcurrentDictionary<int, string> _clientLotSubscriptions = new();
 
-    public MessageSender(BenchmarkConfig config)
+    public MessageSender(BenchmarkConfig config, IBidMetricsCollector? bidMetricsCollector = null)
     {
         _config = config;
+        _bidMetricsCollector = bidMetricsCollector;
     }
 
     public async Task StartSendingAsync(
@@ -99,19 +107,37 @@ public class MessageSender
         var testDuration = _config.Duration;
         var endTime = stopwatch.Elapsed + testDuration;
 
+        // For auction mode, first join a lot
+        if (_config.Mode == BenchmarkMode.Auction)
+        {
+            await JoinLotForClientAsync(connection, cancellationToken);
+        }
+
         switch (_config.Pattern)
         {
             case MessagePattern.FixedRate:
-                await SendFixedRateAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                if (_config.Mode == BenchmarkMode.Auction)
+                    await SendFixedRateAuctionAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                else
+                    await SendFixedRateAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
                 break;
             case MessagePattern.Burst:
-                await SendBurstAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                if (_config.Mode == BenchmarkMode.Auction)
+                    await SendBurstAuctionAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                else
+                    await SendBurstAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
                 break;
             case MessagePattern.RampUp:
-                await SendRampUpAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                if (_config.Mode == BenchmarkMode.Auction)
+                    await SendRampUpAuctionAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                else
+                    await SendRampUpAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
                 break;
             default:
-                await SendFixedRateAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                if (_config.Mode == BenchmarkMode.Auction)
+                    await SendFixedRateAuctionAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
+                else
+                    await SendFixedRateAsync(connection, onMessageSent, stopwatch, endTime, cancellationToken);
                 break;
         }
     }
@@ -258,6 +284,202 @@ public class MessageSender
             SentTimestamp = DateTime.UtcNow,
             Payload = payload
         };
+    }
+
+    private async Task JoinLotForClientAsync(ClientConnection connection, CancellationToken cancellationToken)
+    {
+        // Assign each client to a lot (round-robin across lots 1-10)
+        var lotId = $"lot-{(connection.ClientId % 10) + 1}";
+        _clientLotSubscriptions[connection.ClientId] = lotId;
+
+        var joinLot = new JoinLotMessage { LotId = lotId };
+        var json = joinLot.ToJson();
+        var sentTimestamp = DateTime.UtcNow;
+        
+        await connection.SendAuctionMessageAsync(json, sentTimestamp, cancellationToken);
+        
+        // Wait briefly for LotUpdate response (optional, but helps ensure subscription is active)
+        await Task.Delay(100, cancellationToken);
+    }
+
+    private PlaceBidMessage CreateBidMessage(int clientId)
+    {
+        string lotId;
+        if (!_clientLotSubscriptions.TryGetValue(clientId, out var storedLotId) || string.IsNullOrEmpty(storedLotId))
+        {
+            lotId = $"lot-{(clientId % 10) + 1}";
+            // Store it for future use
+            _clientLotSubscriptions[clientId] = lotId;
+        }
+        else
+        {
+            lotId = storedLotId;
+        }
+
+        // Start with lot's starting price and increment
+        var baseAmount = (clientId % 10 + 1) * 100.0m;
+        var bidAmount = baseAmount + (Interlocked.Increment(ref _nextBidId) * 10.0m);
+
+        return new PlaceBidMessage
+        {
+            LotId = lotId,
+            BidderId = $"bidder-{clientId}",
+            Amount = bidAmount
+        };
+    }
+
+    private async Task SendFixedRateAuctionAsync(
+        ClientConnection connection,
+        Func<ClientConnection, BenchmarkMessage, Task> onMessageSent,
+        Stopwatch stopwatch,
+        TimeSpan endTime,
+        CancellationToken cancellationToken)
+    {
+        var rateLimiter = new RateLimiter(_config.MessagesPerSecondPerClient);
+
+        while (stopwatch.Elapsed < endTime && !cancellationToken.IsCancellationRequested)
+        {
+            if (!connection.IsConnected) break;
+
+            await rateLimiter.WaitForNextAsync(cancellationToken);
+
+            var bidMessage = CreateBidMessage(connection.ClientId);
+            var json = bidMessage.ToJson();
+            var sentTimestamp = DateTime.UtcNow;
+            
+            // Ensure lotId is valid before recording
+            var lotId = string.IsNullOrEmpty(bidMessage.LotId) ? $"lot-{(connection.ClientId % 10) + 1}" : bidMessage.LotId;
+            var bidderId = string.IsNullOrEmpty(bidMessage.BidderId) ? $"bidder-{connection.ClientId}" : bidMessage.BidderId;
+            
+            // Record bid placement in bid metrics collector if available
+            _bidMetricsCollector?.RecordBidPlaced(lotId, bidderId, bidMessage.Amount, sentTimestamp);
+            
+            var sent = await connection.SendAuctionMessageAsync(json, sentTimestamp, cancellationToken);
+            
+            if (sent)
+            {
+                // Create a synthetic BenchmarkMessage for metrics tracking
+                var syntheticMessage = new BenchmarkMessage
+                {
+                    MessageId = Interlocked.Increment(ref _nextMessageId),
+                    ClientId = connection.ClientId,
+                    SentTimestamp = sentTimestamp,
+                    Payload = Array.Empty<byte>()
+                };
+                await onMessageSent(connection, syntheticMessage);
+            }
+        }
+    }
+
+    private async Task SendBurstAuctionAsync(
+        ClientConnection connection,
+        Func<ClientConnection, BenchmarkMessage, Task> onMessageSent,
+        Stopwatch stopwatch,
+        TimeSpan endTime,
+        CancellationToken cancellationToken)
+    {
+        var messagesPerBurst = Math.Max(1, _config.MessagesPerSecondPerClient / 10);
+        var burstInterval = TimeSpan.FromSeconds(1.0 / 10);
+        var nextBurstTime = stopwatch.Elapsed;
+
+        while (stopwatch.Elapsed < endTime && !cancellationToken.IsCancellationRequested)
+        {
+            if (!connection.IsConnected) break;
+
+            var waitTime = nextBurstTime - stopwatch.Elapsed;
+            if (waitTime > TimeSpan.Zero)
+            {
+                await Task.Delay(waitTime, cancellationToken);
+            }
+
+            for (int i = 0; i < messagesPerBurst && stopwatch.Elapsed < endTime; i++)
+            {
+                var bidMessage = CreateBidMessage(connection.ClientId);
+                var json = bidMessage.ToJson();
+                var sentTimestamp = DateTime.UtcNow;
+                
+                // Record bid placement in bid metrics collector if available
+                _bidMetricsCollector?.RecordBidPlaced(bidMessage.LotId, bidMessage.BidderId, bidMessage.Amount, sentTimestamp);
+                
+                var sent = await connection.SendAuctionMessageAsync(json, sentTimestamp, cancellationToken);
+                
+                if (sent)
+                {
+                    var syntheticMessage = new BenchmarkMessage
+                    {
+                        MessageId = Interlocked.Increment(ref _nextMessageId),
+                        ClientId = connection.ClientId,
+                        SentTimestamp = sentTimestamp,
+                        Payload = Array.Empty<byte>()
+                    };
+                    await onMessageSent(connection, syntheticMessage);
+                }
+            }
+
+            nextBurstTime += burstInterval;
+        }
+    }
+
+    private async Task SendRampUpAuctionAsync(
+        ClientConnection connection,
+        Func<ClientConnection, BenchmarkMessage, Task> onMessageSent,
+        Stopwatch stopwatch,
+        TimeSpan endTime,
+        CancellationToken cancellationToken)
+    {
+        var startTime = stopwatch.Elapsed;
+        var rampUpDuration = TimeSpan.FromSeconds(Math.Min(10, endTime.TotalSeconds * 0.3));
+        var targetRate = _config.MessagesPerSecondPerClient;
+        RateLimiter? rateLimiter = null;
+
+        while (stopwatch.Elapsed < endTime && !cancellationToken.IsCancellationRequested)
+        {
+            if (!connection.IsConnected) break;
+
+            var elapsed = stopwatch.Elapsed - startTime;
+            double currentRate;
+
+            if (elapsed < rampUpDuration)
+            {
+                currentRate = (elapsed.TotalSeconds / rampUpDuration.TotalSeconds) * targetRate;
+            }
+            else
+            {
+                currentRate = targetRate;
+            }
+
+            if (rateLimiter == null || Math.Abs(rateLimiter.GetActualRate() - currentRate) > 1.0)
+            {
+                rateLimiter = new RateLimiter(Math.Max(0.1, currentRate));
+            }
+
+            await rateLimiter.WaitForNextAsync(cancellationToken);
+
+            var bidMessage = CreateBidMessage(connection.ClientId);
+            var json = bidMessage.ToJson();
+            var sentTimestamp = DateTime.UtcNow;
+            
+            // Ensure lotId is valid before recording
+            var lotId = string.IsNullOrEmpty(bidMessage.LotId) ? $"lot-{(connection.ClientId % 10) + 1}" : bidMessage.LotId;
+            var bidderId = string.IsNullOrEmpty(bidMessage.BidderId) ? $"bidder-{connection.ClientId}" : bidMessage.BidderId;
+            
+            // Record bid placement in bid metrics collector if available
+            _bidMetricsCollector?.RecordBidPlaced(lotId, bidderId, bidMessage.Amount, sentTimestamp);
+            
+            var sent = await connection.SendAuctionMessageAsync(json, sentTimestamp, cancellationToken);
+            
+            if (sent)
+            {
+                var syntheticMessage = new BenchmarkMessage
+                {
+                    MessageId = Interlocked.Increment(ref _nextMessageId),
+                    ClientId = connection.ClientId,
+                    SentTimestamp = sentTimestamp,
+                    Payload = Array.Empty<byte>()
+                };
+                await onMessageSent(connection, syntheticMessage);
+            }
+        }
     }
 }
 

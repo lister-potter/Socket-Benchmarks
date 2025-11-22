@@ -8,6 +8,7 @@ public class BenchmarkConfig
     public int MessageSizeBytes { get; set; } = 64;
     public TimeSpan Duration { get; set; } = TimeSpan.FromSeconds(30);
     public MessagePattern Pattern { get; set; } = MessagePattern.FixedRate;
+    public BenchmarkMode Mode { get; set; } = BenchmarkMode.Echo;
     public string ScenarioName { get; set; } = "single-client";
     public string ServerLanguage { get; set; } = "dotnet";
     public int? ServerProcessId { get; set; }

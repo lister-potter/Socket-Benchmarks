@@ -1,34 +1,36 @@
+using System.Diagnostics;
 using BenchmarkClient.Models;
 
 namespace BenchmarkClient.Services;
 
 public class LatencyTracker
 {
-    private readonly Dictionary<int, DateTime> _pendingMessages = new();
+    private readonly Dictionary<int, long> _pendingMessages = new();
     private readonly List<LatencyMeasurement> _measurements = new();
     private readonly object _lock = new();
 
-    public void RecordSent(int messageId, DateTime sentTime)
+    public void RecordSent(int messageId, long sentTimestamp)
     {
         lock (_lock)
         {
-            _pendingMessages[messageId] = sentTime;
+            _pendingMessages[messageId] = sentTimestamp;
         }
     }
 
-    public void RecordReceived(int messageId, DateTime receivedTime)
+    public void RecordReceived(int messageId, long receivedTimestamp)
     {
         lock (_lock)
         {
-            if (_pendingMessages.TryGetValue(messageId, out var sentTime))
+            if (_pendingMessages.TryGetValue(messageId, out var sentTimestamp))
             {
-                var latency = receivedTime - sentTime;
+                // Calculate elapsed milliseconds using monotonic time
+                var elapsedTicks = receivedTimestamp - sentTimestamp;
+                var elapsedMs = (elapsedTicks * 1000.0) / Stopwatch.Frequency;
+                
                 _measurements.Add(new LatencyMeasurement
                 {
                     MessageId = messageId,
-                    SentTime = sentTime,
-                    ReceivedTime = receivedTime,
-                    Latency = latency
+                    LatencyMilliseconds = elapsedMs
                 });
                 _pendingMessages.Remove(messageId);
             }

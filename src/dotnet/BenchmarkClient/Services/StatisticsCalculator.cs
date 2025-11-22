@@ -12,7 +12,7 @@ public class StatisticsCalculator
         }
 
         var latencies = measurements
-            .Select(m => m.Latency.TotalMilliseconds)
+            .Select(m => m.LatencyMilliseconds)
             .OrderBy(l => l)
             .ToArray();
 
